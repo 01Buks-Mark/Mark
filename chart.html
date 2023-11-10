@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Web Scraping</title>
+    <!-- Include Chart.js from a CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      /* Center-align the canvas elements */
+      .chart-container {
+        display: inline-block;
+        width: 45%; /* Set a fixed width for each chart container */
+        margin: 10px;
+      }
+      canvas {
+        max-width: 100%; /* Limit the chart width to the container's width */
+      }
+      /* Add CSS for the loading message */
+      #loading-message {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chart-container">
+      <canvas id="barChart" width="400" height="400"></canvas>
+    </div>
+    <div class="chart-container">
+      <canvas id="pieChart" width="400" height="400"></canvas>
+    </div>
+
+    <div style="text-align: center; margin-top: -300px;">
+      <button id="scrapeButton" onclick="fetchData();" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; cursor: pointer; font-size: 16px; border-radius: 5px;">Scrape Data</button>
+      <!-- Loading message -->
+      <p id="loading-message">Loading...</p>
+    </div>
+    <script>
+      // Function to show the loading message and hide the button
+      function showLoadingMessage() {
+        document.getElementById("scrapeButton").style.display = "none";
+        document.getElementById("loading-message").style.display = "block";
+      }
+
+      // Function to hide the loading message and display the button
+      function hideLoadingMessage() {
+        document.getElementById("scrapeButton").style.display = "block";
+        document.getElementById("loading-message").style.display = "none";
+      }
+
+      // Define the calculateAverage function
+      function calculateAverage(data) {
+        const prices = data.map((item) =>
+          parseFloat(item.price.replace("$", ""))
+        );
+        return prices.reduce((acc, price) => acc + price, 0) / prices.length;
+      }
+
+      // Define the displayBarGraph function
+      function displayBarGraph(labels, data, barChartCanvas) {
+        const barChart = new Chart(barChartCanvas, {
+          type: "bar", // bar chart type
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Average Price",
+                data: data,
+                backgroundColor: ["green", "blue", "orange"], // Color of the bars
+              },
+            ],
+          },
+          options: {
+            responsive: true, // Make the chart responsive
+            scales: {
+              y: {
+                beginAtZero: true, // Start the y-axis at 0
+              },
+            },
+          },
+        });
+      }
+
+      // Define the displayPieChart function
+      function displayPieChart(labels, data, pieChartCanvas) {
+        const pieChart = new Chart(pieChartCanvas, {
+          type: "pie", // pie chart type
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                data: data,
+                backgroundColor: getRandomColors(data.length), // Function to generate random colors
+              },
+            ],
+          },
+        });
+      }
+
+      // Function to generate random colors
+      function getRandomColors(numColors) {
+        const colors = [];
+        for (let i = 0; i < numColors; i++) {
+          const randomColor = `rgba(${Math.floor(
+            Math.random() * 256
+          )}, ${Math.floor(Math.random() * 256)}, ${Math.floor(
+            Math.random() * 256
+          )}, 0.7)`;
+          colors.push(randomColor);
+        }
+        return colors;
+      }
+
+      async function fetchData() {
+        try {
+          // Show the loading message
+          showLoadingMessage();
+
+          const appleDataResponse = await fetch(
+            "http://localhost:3000/scrape/apple"
+          );
+          const nokiaDataResponse = await fetch(
+            "http://localhost:3000/scrape/nokia"
+          );
+          const samsungDataResponse = await fetch(
+            "http://localhost:3000/scrape/samsung"
+          );
+
+          if (
+            appleDataResponse.status === 200 &&
+            nokiaDataResponse.status === 200 &&
+            samsungDataResponse.status === 200
+          ) {
+            const appleData = await appleDataResponse.json();
+            const nokiaData = await nokiaDataResponse.json();
+            const samsungData = await samsungDataResponse.json();
+
+            const appleAverage = calculateAverage(appleData);
+            const nokiaAverage = calculateAverage(nokiaData);
+            const samsungAverage = calculateAverage(samsungData);
+
+            const labels = ["Apple", "Nokia", "Samsung"];
+            const averagePrices = [appleAverage, nokiaAverage, samsungAverage];
+
+            // Define the chart canvases after data is fetched
+            const barChartCanvas = document
+              .getElementById("barChart")
+              .getContext("2d");
+            const pieChartCanvas = document
+              .getElementById("pieChart")
+              .getContext("2d");
+
+            displayBarGraph(labels, averagePrices, barChartCanvas);
+            displayPieChart(labels, averagePrices, pieChartCanvas);
+
+            // Hide the loading message and display the button
+            hideLoadingMessage();
+          } else {
+            console.error("Failed to scrape data");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+        }
+      }
+
+      // Rest of your JavaScript code...
+
+    </script>
+  </body>
+</html>
